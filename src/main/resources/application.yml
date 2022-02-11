@@ -1,0 +1,51 @@
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  shardingsphere:
+    props:
+      sql:
+        show: true
+    datasource:
+      # 分库名
+      names: ds0,ds1
+      # 不同库的数据源
+      ds0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/shardingspheredemo?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false
+        username: root
+        password: 123456
+      ds1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/ds0?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false
+        username: root
+        password: 123456
+    sharding:
+      # 默认数据源（未设置分表策略的表将默认用此数据源）
+      default-datasource-name: ds0
+      # 分库策略
+      default-database-strategy:
+        inline:
+          sharding-column: id
+          algorithm-expression: ds$->{id % 2}
+      tables:
+        member_info:
+          # 配置分库数据源(分表处理)
+          actual-data-nodes: ds${['0','1']}.member_info_${['0','1','2']}  #数据节点 即分库也分表
+          # 具体分表策略
+          table-strategy:
+            # inline 表达式配置分表
+            inline:
+              sharding-column: id  #分表字段
+              # 分表策略 根据id取模,确定数据最终落在那个表中
+              algorithm-expression: member_info_$->{id % 3}  #分表字段
+          # 配置主键策略
+          key-generator:
+            column: id
+            type: SNOWFLAKE
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.clh.shardingspheredemo.model
